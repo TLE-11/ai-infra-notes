@@ -8,7 +8,7 @@ First question: **How can several teams share 100 GPUs efficiently while ensurin
 
 ## Start Here
 
-No GPU or Kubernetes cluster is required. Read the first three notes in order, then try the paper exercise. Product names and configuration fields can wait until the implementation comparison.
+No GPU or Kubernetes cluster is required. Read the first three notes in order, then try the paper exercise and its Python simulation. Product names and configuration fields can wait until the implementation comparison.
 
 The notes and lab linked below are currently in Simplified Chinese.
 
@@ -20,6 +20,14 @@ The notes and lab linked below are currently in Simplified Chinese.
 | 4 | [Lab: Allocate 100 GPUs](labs/01-share-100-gpus.md) | When should you borrow, reclaim, or wait? |
 | 5 | [Volcano and Kueue: A Concept Comparison](scheduling/02-volcano-and-kueue.md) | How do familiar concepts map to real systems? |
 | 6 | [Other Resource Elasticity Strategies](scheduling/03-elasticity-strategies.md) | What problems do fair sharing, backfill, and autoscaling solve? |
+
+Run the simulation from the repository root with Python 3.9+ (standard library only):
+
+```bash
+python3 labs/simulate_100_gpus.py
+```
+
+It prints allocation, borrowing, reclamation, and task preemption step by step. The output is in Chinese, and the script does not access real GPUs.
 
 ## One Example Throughout
 
@@ -42,7 +50,7 @@ ai-infra-notes/
 ├── AGENTS.md          # Guidelines for maintaining the notes
 ├── gpu-systems/       # Resource pools and how they support training and inference
 ├── scheduling/        # Resource allocation, borrowing, reclamation, and preemption
-└── labs/              # Small exercises, starting with a paper simulation
+└── labs/              # Paper exercises and a simple Python simulation
 ```
 
 ## How to Use These Notes
