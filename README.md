@@ -1,57 +1,54 @@
-# AI Infra Notes · 把算力系统学明白
+# AI Infra Notes · Understanding Compute Systems
 
-从实际问题出发，记录 GPU 资源池、资源调度和推理服务的学习过程。
+**English** | [简体中文](README_CN.md)
 
-第一站：**100 张 GPU，几个团队一起用，怎样既不浪费，又能保证关键任务有卡？**
+Learning notes on GPU resource pools, resource scheduling, and inference serving, starting with practical questions.
 
-## 从这里开始
+First question: **How can several teams share 100 GPUs efficiently while ensuring critical workloads get the resources they need?**
 
-不需要准备 GPU 或 Kubernetes 集群。先按顺序读前 3 篇，再做纸面实验；遇到产品名称和参数时，可以留到实现对照篇再看。
+## Start Here
 
-| 顺序 | 笔记 | 读完能回答什么 |
+No GPU or Kubernetes cluster is required. Read the first three notes in order, then try the paper exercise. Product names and configuration fields can wait until the implementation comparison.
+
+The notes and lab linked below are currently in Simplified Chinese.
+
+| Step | Note | What you will learn |
 |---|---|---|
-| 1 | [GPU 资源池与训推一体](gpu-systems/01-unified-resource-pool.md) | 大资源池、物理集群和逻辑队列有什么区别？ |
-| 2 | [资源调度与流量调度](gpu-systems/02-resource-and-traffic-scheduling.md) | 分 GPU 和分请求分别由谁负责？ |
-| 3 | [配额、借用、回收与抢占](scheduling/01-quota-borrowing-reclaim-preemption.md) | 为什么配额 40 张的队列可以用 80 张？ |
-| 4 | [实验：你来分配 100 张 GPU](labs/01-share-100-gpus.md) | 自己判断何时借用、何时回收，何时只能等待 |
-| 5 | [Volcano 与 Kueue 概念对照](scheduling/02-volcano-and-kueue.md) | 熟悉的概念在真实系统里叫什么？ |
-| 6 | [资源弹性还有哪些办法](scheduling/03-elasticity-strategies.md) | 公平共享、回填和扩缩容各解决什么问题？ |
+| 1 | [GPU Resource Pools and Unified Training and Inference](gpu-systems/01-unified-resource-pool.md) | How do a logical pool, physical clusters, and queues differ? |
+| 2 | [Resource Scheduling and Traffic Scheduling](gpu-systems/02-resource-and-traffic-scheduling.md) | Who allocates GPUs, and who routes requests? |
+| 3 | [Quotas, Borrowing, Reclamation, and Preemption](scheduling/01-quota-borrowing-reclaim-preemption.md) | Why can a queue with a 40-GPU entitlement use 80 GPUs? |
+| 4 | [Lab: Allocate 100 GPUs](labs/01-share-100-gpus.md) | When should you borrow, reclaim, or wait? |
+| 5 | [Volcano and Kueue: A Concept Comparison](scheduling/02-volcano-and-kueue.md) | How do familiar concepts map to real systems? |
+| 6 | [Other Resource Elasticity Strategies](scheduling/03-elasticity-strategies.md) | What problems do fair sharing, backfill, and autoscaling solve? |
 
-## 一个贯穿全文的例子
+## One Example Throughout
 
-有 100 张同规格 GPU。团队 A 应得 60 张，团队 B 应得 40 张；两者都允许借用空闲份额，使用上限均为 100 张，没有专属保留部分。
+There are 100 identical GPUs. Team A is entitled to 60, and Team B to 40. Both may borrow unused shares, both have a usage limit of 100, and neither has an exclusive reservation.
 
-| 场景 | A 已分配 | B 已分配 | 池内空闲 | 发生了什么 |
+| Scenario | A allocated | B allocated | Pool idle | What happened |
 |---|---:|---:|---:|---|
-| A 暂时需求少 | 20 | 80 | 0 | B 超出自身份额使用了 40 张 |
-| A 需求增至 50 | 50 | 50 | 0 | 从 B 回收 30 张，B 仍超额使用 10 张 |
-| A 需求增至 60 | 60 | 40 | 0 | 再从 B 回收 10 张，双方回到应得份额 |
+| A has low demand | 20 | 80 | 0 | B uses 40 GPUs beyond its own share |
+| A's demand rises to 50 | 50 | 50 | 0 | Reclaim 30 from B; B still borrows 10 |
+| A's demand rises to 60 | 60 | 40 | 0 | Reclaim another 10; both return to their entitlements |
 
-这是用于理解规则的教学模型：暂时忽略整机粒度、卡型差异、网络拓扑、任务不可拆分及资源退出耗时。实际调度必须补上这些条件，不能直接照表驱逐任务。
+This teaching model leaves out whole-machine allocation, GPU differences, network topology, indivisible jobs, and resource release delays. Real scheduling must account for these constraints before evicting workloads.
 
-## 目录
+## Repository Layout
 
 ```text
 ai-infra-notes/
-├── README.md
-├── AGENTS.md          # 后续整理笔记时的写作约定
-├── gpu-systems/       # 资源池是什么，怎样承载训练和推理
-├── scheduling/        # 资源如何分配、借用、回收和抢占
-└── labs/              # 用小实验验证理解，第一版从纸面推演开始
+├── README.md          # English introduction
+├── README_CN.md       # Chinese introduction
+├── AGENTS.md          # Guidelines for maintaining the notes
+├── gpu-systems/       # Resource pools and how they support training and inference
+├── scheduling/        # Resource allocation, borrowing, reclamation, and preemption
+└── labs/              # Small exercises, starting with a paper simulation
 ```
 
-## 怎么使用这些笔记
+## How to Use These Notes
 
-每篇先提出一个问题，再用例子解释，最后给出自测题和参考资料。先用自己的话回答问题，再展开参考答案；答不出来，就回看例子，不必先背参数名。
+Each note starts with a question, explains it through examples, and ends with a self-check and references. Try answering in your own words before expanding the suggested answer. If you get stuck, revisit the example before memorizing configuration fields.
 
-这里分清三类内容：**教学模型**是为了帮助理解的简化；**系统事实**以注明版本或核对日期的官方资料为依据；**工程判断**说明取舍，不能直接当作某个产品的默认行为。
+The notes distinguish three kinds of content: **teaching models** simplify a problem for learning; **system facts** rely on official sources with a version or verification date; **engineering judgments** explain tradeoffs and should not be treated as a product's default behavior.
 
-这份笔记不声称已经验证任何公司的线上架构。后续对照实际平台时，只记录有证据的行为，并把未知部分保留成问题。
-
-## 教学组织参考
-
-借鉴 [zero-to-sglang](https://github.com/datawhalechina/zero-to-sglang) 从概念走向动手和真实实现的学习顺序，以及 [hello-agents](https://github.com/datawhalechina/hello-agents) 的章节导航方式。本文正文和练习为独立整理，不复制它们的章节内容。
-
-目前完成的是资源池与队列共享入门。后续有实际学习内容时，再增加训练、推理引擎、网络与存储等主题。
-
-首次整理及外部资料核对：2026-10-22。Kueue 对照使用 v0.20 文档；未部署或验证实际集群。
+These notes do not claim to verify any company's production architecture. When comparing them with a real platform, record observed behavior and keep unanswered questions explicit.
